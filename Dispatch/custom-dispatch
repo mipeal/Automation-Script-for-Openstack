@@ -1,0 +1,138 @@
+#!/var/ossec/framework/python/bin/python3
+import sys
+import requests
+import json
+import logging
+import datetime
+low_alerts = [5,6,3,7]
+medium_alerts = [8]
+high_alerts = [12,13,14,15]
+# Start counter
+start = datetime.datetime.now()
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    filename='/var/ossec/logs/integrations.log',
+    format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+logging.info('Starting dispatch logger')
+#Read configuration parameters
+alert_file = open(sys.argv[1])
+user = sys.argv[2].split(':')[0]
+password = sys.argv[2].split(':')[1]
+url = sys.argv[3]  
+logging.info('URL: {}'.format(url))
+logging.info('User: {}'.format(user))
+logging.info('Password: {}'.format(password))
+#Read the alert file
+alert_json = json.loads(alert_file.read())
+alert_file.close()
+logging.info('Alert file loaded')
+
+#resolve time from now to one day
+time = datetime.datetime.now()+datetime.timedelta(days=1)
+#Parse url for host and port
+host = url.split('//')[1].split(':')[0]
+
+payload = json.dumps({
+"email": user,
+"projects": [],
+"password": password
+})
+headers = {
+'Content-Type': 'application/json'
+}
+data = None
+response = requests.request("POST", url+'auth/login', headers=headers, data=payload)
+logging.info("Response status code: {}".format(response.status_code))
+if response.status_code == 200:
+    data = json.loads(response.text)
+    logging.info("Connected to Dispatch API")
+    
+alert_message = ''
+content = ''
+#Extract issue fields
+agent_name = alert_json['agent']['name']
+alert_level = alert_json['rule']['level']
+details = alert_json.get('data')
+if details is not None:
+        content = "Details: " + details.get('vulnerability').get('rationale')
+if alert_level in low_alerts:
+    alert_message = "Low"
+if alert_level in medium_alerts:
+    alert_message = "Medium"
+if alert_level in high_alerts:
+    alert_message = "High"
+if alert_message != "":
+    description = alert_json['rule']['description']
+    logging.info('Alert level: ' + str(alert_level))
+    incident_payload = json.dumps({
+    "title": 'Wazuh alert: [' + description +']',
+    "description": 'State:'+ description +'\nAlert level: ' +str(alert_level)+ '\nAgent name: ' + str(agent_name) + '\n' + content,
+    "status": "Active",
+    "visibility": "Open",
+    "incident_priority": {
+        "name": alert_message,
+        "description": "The incident priority is " + alert_message
+    },
+    "incident_type": {
+        "name": "Vulnerability",
+        "visibility": "Open",
+        "description": "existing-type"
+    },
+    "project": {
+        "name": "default"
+    }
+    })
+    headers = {
+    'Authorization': 'Bearer {}'.format(data['token']),
+    'Content-Type': 'application/json'
+    }
+    logging.info("Sending request to: {}".format(url))
+    response = requests.request("POST", url+'incidents', headers=headers, data=incident_payload)
+    logging.info("Incident Created")
+    if alert_message == "Medium" or alert_message == "High" or response.status_code == 200:
+        incident = response.json()
+        task_payload = json.dumps({
+            'incident': {
+                'id': incident['id'],
+                'title': incident['title'],
+                'description': incident['description'],
+                'status': incident['status'],
+                'visibility': incident['visibility'],
+                'closed_at': incident['closed_at'],
+                'commander': incident['commander'],
+                'created_at': incident['created_at'],
+                'incident_priority': incident['incident_priority'],
+                'incident_type': incident['incident_type'],
+                'name': incident['name'],
+                'project': incident['project'],
+                'reported_at': incident['reported_at'],
+                'reporter': incident['reporter'],
+                'stable_at': incident['stable_at']
+            },
+            'description': incident['description'],
+            'priority': incident['incident_priority']['name'],
+            'status': 'Open',
+            'weblink': url.replace('api/v1/','')+'incidents/dispatch-'+incident['project']['name']+'-'+incident['project']['name']+'-'+str(incident['id'])+'?project='+incident['project']['name'],
+            'owner': {
+                'individual': {
+                    'email': user
+                }
+            },
+            'creator': {
+                'individual': {
+                    'email': user
+                }
+            },
+            'resolve_by': str(datetime.datetime.now()-datetime.timedelta(days=1))
+        })
+        requests.request("POST", url+'tasks', headers=headers, data=task_payload)
+        logging.info("Task created")
+        end = datetime.datetime.now()
+        logging.info('Total time: '+str(end-start)+'s')
+        sys.exit(0)
+logging.info('Alert level skipped')
+end = datetime.datetime.now()
+logging.info('Total time: '+str(end-start)+'s')
+sys.exit(0)
