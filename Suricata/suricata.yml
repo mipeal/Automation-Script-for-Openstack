@@ -764,7 +764,7 @@ app-layer:
       enabled: yes
       # memcap: 64mb
     rdp:
-      #enabled: yes
+      enabled: yes
     ssh:
       enabled: yes
       #hassh: yes
