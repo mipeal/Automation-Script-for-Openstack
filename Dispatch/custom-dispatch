@@ -95,7 +95,7 @@ if alert_message != "":
     response = requests.request("POST", url+'incidents', headers=headers, data=incident_payload)
     logging.info("Incident Created")
     if alert_message == "Medium" or alert_message == "High" or response.status_code == 200:
-        incident = response.json()
+        incident = json.loads(response.text)
         task_payload = json.dumps({
             'incident': {
                 'id': incident['id'],
