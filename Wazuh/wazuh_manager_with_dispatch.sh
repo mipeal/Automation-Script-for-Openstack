@@ -17,9 +17,9 @@ docker-compose up -d
 wget --no-check-certificate --quiet  --method POST  --timeout=0 --header ''Content-Type: application/json''  --body-data ''{"email": "noreply@dispatch.org","projects": [],  "password": "Dispatch123"}'' ''http://10.212.139.227:8000/api/v1/default/auth/register''
 docker exec -it dispatch_web_1 bash -c ''dispatch user update --role Owner --organization default noreply@dispatch.org''
 echo "Adding dispatcher"
-curl -so /var/ossec/integration/custom-dispatch https://raw.githubusercontent.com/mipeal/Automation-Script-for-Openstack/main/Dispatch/custom-dispatch
-chmod 770 /var/ossec/integration/custom-dispatch
-chown root:ossec /var/ossec/integration/custom-dispatch
+curl -so /var/ossec/integrations/custom-dispatch https://raw.githubusercontent.com/mipeal/Automation-Script-for-Openstack/main/Dispatch/custom-dispatch
+chmod 770 /var/ossec/integrations/custom-dispatch
+chown root:ossec /var/ossec/integrations/custom-dispatch
 echo "Updating ossec.conf"
 echo "<!-- DISPATCH -->" >> /var/ossec/etc/ossec.conf
 echo "<ossec_config>" >> /var/ossec/etc/ossec.conf
