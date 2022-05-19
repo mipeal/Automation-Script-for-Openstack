@@ -9,6 +9,7 @@ import datetime
 low_alerts = [5,6,3,7]
 medium_alerts = [8]
 high_alerts = [12,13,14,15]
+
 # Start counter
 start = datetime.datetime.now()
 
@@ -46,10 +47,11 @@ headers = {
 }
 data = None
 response = requests.request("POST", url+'auth/login', headers=headers, data=payload)
-logging.info("Response status code: {}".format(response.status_code))
+logging.info("Response: {}".format(response.status_code))
 if response.status_code == 200:
     data = json.loads(response.text)
     logging.info("Connected to Dispatch API")
+    logging.debug("Token: {}".format(data['token']))
     
 alert_message = ''
 content = ''
@@ -93,9 +95,10 @@ if alert_message != "":
     }
     logging.info("Sending request to: {}".format(url))
     response = requests.request("POST", url+'incidents', headers=headers, data=incident_payload)
-    logging.info("Incident Created")
     if alert_message == "Medium" or alert_message == "High" or response.status_code == 200:
+        logging.info("Incident Created")
         incident = json.loads(response.text)
+        logging.debug("Incident ID: {}".format(incident['id']))
         task_payload = json.dumps({
             'incident': {
                 'id': incident['id'],
@@ -131,7 +134,8 @@ if alert_message != "":
             'resolve_by': str(datetime.datetime.now()-datetime.timedelta(days=1))
         })
         requests.request("POST", url+'tasks', headers=headers, data=task_payload)
-        logging.info("Task created")
+        if response.status_code == 200:
+            logging.info("Task Created")
         end = datetime.datetime.now()
         logging.info('Total time: '+str(end-start)+'s')
         sys.exit(0)
