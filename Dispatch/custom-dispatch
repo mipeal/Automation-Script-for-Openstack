@@ -25,8 +25,8 @@ user = sys.argv[2].split(':')[0]
 password = sys.argv[2].split(':')[1]
 url = sys.argv[3]  
 logging.info('URL: {}'.format(url))
-logging.info('User: {}'.format(user))
-logging.info('Password: {}'.format(password))
+logging.debug('User: {}'.format(user))
+logging.debug('Password: {}'.format(password))
 #Read the alert file
 alert_json = json.loads(alert_file.read())
 alert_file.close()
