@@ -11,23 +11,28 @@ echo "Running suricata boot script"
 add-apt-repository ppa:oisf/suricata-stable -y
 apt update
 apt install -y suricata
+wget https://rules.emergingthreats.net/open/suricata-6.0.3/emerging.rules.tar.gz
+tar zxvf emerging.rules.tar.gz
+rm /etc/suricata/rules/* -f
+mv rules/*.rules /etc/suricata/rules/
+rm -f /etc/suricata/suricata.yaml
+curl -so /etc/suricata/suricata.yaml https://raw.githubusercontent.com/mipeal/Automation-Script-for-Openstack/main/Suricata/suricata.yml
+suricata-update
+suricata-update enable-source tgreen/hunting
+systemctl daemon-reload
+systemctl enable suricata
+systemctl start suricata
+systemctl status suricata
+echo "Verifying suricata"
+curl http://testmynids.org/uid/index.html
+grep 2100498 /var/log/suricata/fast.log
+jq 'select(.alert .signature_id==2100498)' /var/log/suricata/eve.json
 echo "<ossec_config>" >> /var/ossec/etc/ossec.conf
 echo "  <localfile>" >> /var/ossec/etc/ossec.conf
 echo "    <log_format>json</log_format>" >> /var/ossec/etc/ossec.conf
 echo "    <location>/var/log/suricata/eve.json</location>" >> /var/ossec/etc/ossec.conf
 echo "  </localfile>" >> /var/ossec/etc/ossec.conf
 echo "</ossec_config>" >> /var/ossec/etc/ossec.conf
-sed -i "s/eth0/ens3/g" /etc/suricata/suricata.yaml
-sed -i "s/eth1/enp0s3/g" /etc/suricata/suricata.yaml
-sed -i "s/#- rule-reload: false/rule-reload: true/g" /etc/suricata/suricata.yaml
-sed -i "s/#community-id: false/community-id: true/g" /etc/suricata/suricata.yaml
-suricata-update
-suricata-update enable-source tgreen/hunting
-systemctl enable suricata
-systemctl start suricata
-systemctl status suricata
-curl http://testmynids.org/uid/index.html
-tail -n1 /var/log/suricata/eve.json | jq .
 systemctl enable wazuh-agent
 systemctl start wazuh-agent
 systemctl status wazuh-agent
