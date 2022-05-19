@@ -80,11 +80,6 @@ if alert_message != "":
         "name": alert_message,
         "description": "The incident priority is " + alert_message
     },
-    "incident_type": {
-        "name": "Vulnerability",
-        "visibility": "Open",
-        "description": "existing-type"
-    },
     "project": {
         "name": "default"
     }
