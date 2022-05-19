@@ -1,9 +1,11 @@
 #!/var/ossec/framework/python/bin/python3
+
 import sys
 import requests
 import json
 import logging
 import datetime
+
 low_alerts = [5,6,3,7]
 medium_alerts = [8]
 high_alerts = [12,13,14,15]
@@ -54,9 +56,10 @@ content = ''
 #Extract issue fields
 agent_name = alert_json['agent']['name']
 alert_level = alert_json['rule']['level']
-details = alert_json.get('data')
-if details is not None:
-        content = "Details: " + details.get('vulnerability').get('rationale')
+if 'data' in alert_json:
+    details = alert_json['data']
+    if 'vulnerability' in details:
+            content = "Details: " + details.get('vulnerability').get('rationale')
 if alert_level in low_alerts:
     alert_message = "Low"
 if alert_level in medium_alerts:
