@@ -118,8 +118,8 @@ if 'data' in alert_json:
     details = alert_json['data']
     if 'vulnerability' in details:
             content = "Details: " + details.get('vulnerability').get('rationale')
-if alert_level in low_level:
-    alert_message = "Low"
+# if alert_level in low_level:
+#     alert_message = "Low"
 if alert_level in medium_level:
     alert_message = "Medium"
 if alert_level in high_level:
@@ -147,7 +147,7 @@ if alert_message != "":
     })
     logging.info("Sending request to: {}".format(url))
     response = requests.request("POST", url+'incidents', headers=headers, data=incident_payload)
-    if alert_message == "Medium" or alert_message == "High" or response.status_code == 200:
+    if alert_message == "Medium" or alert_message == "High" and response.status_code == 200:
         logging.info("Incident Created")
         incident = json.loads(response.text)
         logging.debug("Incident ID: {}".format(incident['id']))
