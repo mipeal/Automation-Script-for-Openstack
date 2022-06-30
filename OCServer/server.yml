@@ -1,0 +1,94 @@
+heat_template_version: '2018-08-31'
+description: Openstack Heat Stack for openconnect-vpn-server at NCR
+parameters:
+# Global Defaults
+  image_vpn:
+    type: string
+    description: Image to use for the instance
+    default: Ubuntu Server 20.04 LTS (Focal Fossa) amd64
+  key_name:
+    type: string
+    description: Name of the keypair to use
+    default: kaliskyhigh
+  vpn-network:
+    type: string
+    description: Name of the external network to use (algo)
+    default: 44adc61e-2d81-4ee2-a57a-68c1aebd747d
+  vpn-subnet:
+    type: string
+    description: subnet to use for the instance
+    default: 59ebfdff-fc83-4734-93cc-fb963b67dbdb
+  flavor_linux:
+    type: string
+    description: Flavor to use for the instance (2GB RAM with 4 cores)
+    default: gx3.4c2r
+  external-network:
+    type: string
+    description: Name of the external network to use
+    default: 730cb16e-a460-4a87-8c73-50a2cb2293f9
+
+    
+resources:
+# Global Defaults
+  vpn-security-group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: vpn ncr
+      description: "Security group for VPN server"
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: tcp
+          port_range_min: 443
+          port_range_max: 443
+        - remote_ip_prefix: 0.0.0.0/0
+          protocol: udp
+  vpn-port:
+    depends_on:
+      - vpn-security-group
+    type: OS::Neutron::Port
+    properties:
+      name: vpn-port
+      security_groups:
+        - { get_resource: vpn-security-group }
+      network: { get_param: vpn-network }
+      fixed_ips:
+        - subnet: { get_param: vpn-subnet }
+  vpn-vm:
+    depends_on:
+      - vpn-port
+    type: OS::Nova::Server
+    properties:
+      name: ocserv-vm
+      image: { get_param: image_vpn }
+      flavor: { get_param: flavor_linux }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: vpn-port }
+      user_data:
+        #str_replace:
+          #template: { get_file: lib/singleLinux_boot.bash }
+        get_file: scripts/bootscript.sh
+  vpn-vm-floating-ip:
+    depends_on:
+      - vpn-vm
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: external-network }
+      port_id: { get_resource: vpn-port }
+
+outputs:
+  server_private_ip:
+    description: IP address of server in private network
+    value: { get_attr: [ vpn-vm, first_address ] }
+  server_public_ip:
+    description: Floating IP address of server in public network
+    value: { get_attr: [ vpn-vm-floating-ip, floating_ip_address ] }
+
